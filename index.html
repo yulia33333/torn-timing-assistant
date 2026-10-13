@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Torn City Timing Assistant v3.5</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        torn: {
+                            bg: '#121820',
+                            card: '#1a222d',
+                            cardHover: '#222c3a',
+                            input: '#242f3e',
+                            border: '#2e3c4f',
+                            gold: '#f39c12',
+                            goldHover: '#d68910',
+                            text: '#e2e8f0',
+                            muted: '#94a3b8',
+                            green: '#2ecc71',
+                            red: '#e74c3c',
+                            redDark: '#900c3f'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #121820;
+            color: #e2e8f0;
+        }
+        .font-mono-code {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #121820;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2e3c4f;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3f516a;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between bg-torn-bg text-torn-text antialiased selection:bg-torn-gold selection:text-black">
+
+    <!-- HEADER -->
+    <header class="border-b border-torn-border bg-torn-card/90 backdrop-blur sticky top-0 z-50 shadow-md">
+        <div class="max-w-5xl mx-auto px-4 py-3 sm:py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div class="flex items-center space-x-3 w-full sm:w-auto justify-between sm:justify-start">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20 font-bold text-black text-xl tracking-tighter">
+                        TC
+                    </div>
+                    <div>
+                        <h1 class="text-base sm:text-lg font-bold tracking-tight text-white flex items-center gap-2">
+                            Torn City Timing Assistant
+                            <span class="text-[10px] px-2 py-0.5 rounded-full bg-torn-gold/10 text-torn-gold border border-torn-gold/20 font-mono">v3.5</span>
+                        </h1>
+                        <p class="text-xs text-torn-muted">War Stacking & Cooldown Cutoff Assistant</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Clocks Container -->
+            <div class="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-center">
+                <div class="bg-torn-bg border border-torn-border px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs shadow-inner">
+                    <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span class="text-torn-muted font-medium">TCT:</span>
+                    <span id="clock-tct" class="font-mono-code font-bold text-torn-gold">--:--:--</span>
+                </div>
+                <div class="bg-torn-bg border border-torn-border px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs shadow-inner">
+                    <span class="inline-block w-2 h-2 rounded-full bg-sky-500"></span>
+                    <span class="text-torn-muted font-medium">Local:</span>
+                    <span id="clock-local" class="font-mono-code font-bold text-sky-400">--:--:--</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 py-6 sm:py-8 w-full flex-grow">
+
+        <!-- TAB NAVIGATION -->
+        <div class="grid grid-cols-2 gap-2 p-1.5 bg-torn-card border border-torn-border rounded-2xl mb-8 shadow-inner">
+            <button onclick="switchTab('war')" id="tab-btn-war" class="py-3 px-3 sm:px-4 rounded-xl font-semibold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 bg-torn-gold text-black shadow-md shadow-amber-500/20">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                <span>War Stacking <span class="hidden sm:inline">(1,000 E)</span></span>
+            </button>
+            <button onclick="switchTab('custom')" id="tab-btn-custom" class="py-3 px-3 sm:px-4 rounded-xl font-semibold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 text-torn-muted hover:text-white hover:bg-torn-border/40">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span>Custom Event Cooldown Cutoff</span>
+            </button>
+        </div>
+
+        <!-- TAB 1: WAR STACKING CALCULATOR -->
+        <section id="tab-war" class="space-y-6">
+            <div class="bg-torn-card border border-torn-border rounded-2xl p-5 sm:p-6 shadow-xl relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-32 h-32 bg-torn-gold/5 rounded-full blur-2xl pointer-events-none"></div>
+
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                    <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+                        <span class="text-torn-gold font-mono">#</span> War Stacking Calculator
+                    </h2>
+                    <span class="text-[11px] px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium w-fit">4x Xanax + Swiss Airstrip + 1h Buffer</span>
+                </div>
+                <p class="text-xs sm:text-sm text-torn-muted mb-6">
+                    Paste your raw ranked war game notification string or manually set the war start time. Calculates 1,000 Energy stacking, Airstrip flight/rehab, and a <strong>1-hour cushion buffer</strong> before war start.
+                </p>
+
+                <!-- Auto-Parse Input Box -->
+                <div class="mb-6 bg-torn-bg/80 border border-torn-border rounded-xl p-4 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <label class="block text-xs font-bold uppercase tracking-wider text-torn-gold flex items-center gap-1.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                            Auto-Parse Notification String
+                        </label>
+                        <button onclick="triggerParseManual()" class="text-[11px] bg-torn-gold/10 hover:bg-torn-gold/20 text-torn-gold border border-torn-gold/30 px-2.5 py-1 rounded-lg transition font-semibold">
+                            Parse String
+                        </button>
+                    </div>
+                    <textarea id="war-raw-paste" rows="2" placeholder='e.g. "The ranked war between Mana and KitsuLand will begin in 49 hours on Thu 13:00:00 - 08/10/26"' class="w-full bg-torn-input border border-torn-border rounded-lg px-3.5 py-2 text-xs sm:text-sm text-white focus:outline-none focus:border-torn-gold transition font-mono-code resize-none"></textarea>
+                    <p id="paste-feedback" class="text-[11px] text-torn-muted italic">Paste notification string above to auto-extract date/time into the input picker below.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <!-- Manual Datetime Input -->
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-torn-muted mb-2">
+                            War Start Time (TCT / UTC)
+                        </label>
+                        <input type="datetime-local" id="war-datetime" class="w-full bg-torn-input border border-torn-border rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-torn-gold transition font-mono-code text-xs sm:text-sm">
+                    </div>
+
+                    <!-- Timezone Selector -->
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="text-xs font-semibold uppercase tracking-wider text-torn-muted">
+                                Local Timezone Offset
+                            </label>
+                            <span class="text-xs text-torn-gold font-mono-code" id="war-tz-display">SGT (UTC +8)</span>
+                        </div>
+                        <select id="war-tz-select" class="w-full bg-torn-input border border-torn-border rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-torn-gold transition font-mono-code text-xs sm:text-sm">
+                            <option value="-12">UTC -12:00 (Anytown)</option>
+                            <option value="-8">UTC -08:00 (PST / US Pacific)</option>
+                            <option value="-7">UTC -07:00 (MST / US Mountain)</option>
+                            <option value="-6">UTC -06:00 (CST / US Central)</option>
+                            <option value="-5">UTC -05:00 (EST / US Eastern)</option>
+                            <option value="0">UTC +00:00 (TCT / GMT / London Winter)</option>
+                            <option value="1">UTC +01:00 (BST / CET / West Africa)</option>
+                            <option value="2">UTC +02:00 (CEST / EET / Cairo)</option>
+                            <option value="3">UTC +03:00 (MSK / Riyadh / East Africa)</option>
+                            <option value="5.5">UTC +05:30 (IST / India)</option>
+                            <option value="7">UTC +07:00 (ICT / Bangkok / Jakarta)</option>
+                            <option value="8" selected>UTC +08:00 (SGT / AWST / Singapore / HK)</option>
+                            <option value="9">UTC +09:00 (JST / Tokyo / Seoul)</option>
+                            <option value="10">UTC +10:00 (AEST / Sydney / Brisbane)</option>
+                            <option value="12">UTC +12:00 (NZST / Fiji)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mt-6 pt-5 border-t border-torn-border flex justify-end">
+                    <button onclick="calculateWarStack()" class="w-full sm:w-auto px-6 py-3 rounded-xl bg-torn-gold hover:bg-torn-goldHover text-black font-bold text-xs sm:text-sm transition shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 012-2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                        Calculate Stacking Timeline
+                    </button>
+                </div>
+            </div>
+
+            <!-- War Stacking Results View -->
+            <div id="war-results-container" class="hidden space-y-4">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-torn-card border border-torn-border p-4 rounded-2xl shadow-lg">
+                    <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+                        <h3 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                            <svg class="w-5 h-5 text-torn-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            War Stacking Timeline
+                        </h3>
+                        <!-- RED HIGHLIGHT BADGE FOR STACK START -->
+                        <span id="war-start-stack-badge" class="px-3 py-1.5 rounded-xl bg-rose-600/20 border border-rose-500/50 text-rose-400 font-mono-code font-bold text-xs sm:text-sm tracking-tight shadow-md flex items-center gap-1.5 animate-pulse">
+                            <svg class="w-4 h-4 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                            <span id="war-stack-highlight-text">Start Stacking latest by --:--</span>
+                        </span>
+                    </div>
+                    <button onclick="copyWarTimeline()" class="text-xs bg-torn-bg hover:bg-torn-border border border-torn-border px-3.5 py-2 rounded-xl transition text-torn-text flex items-center justify-center gap-1.5 w-full md:w-auto">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v1-M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+                        Copy Timeline
+                    </button>
+                </div>
+
+                <div id="war-timeline-list" class="space-y-3"></div>
+            </div>
+        </section>
+
+        <!-- TAB 2: CUSTOM EVENT COOLDOWN CUTOFF -->
+        <section id="tab-custom" class="hidden space-y-6">
+            <div class="bg-torn-card border border-torn-border rounded-2xl p-5 sm:p-6 shadow-xl relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-32 h-32 bg-torn-gold/5 rounded-full blur-2xl pointer-events-none"></div>
+
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                    <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+                        <span class="text-torn-gold font-mono">#</span> Event Cooldown Cutoffs
+                    </h2>
+                    <span class="text-[11px] px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium w-fit">Active Cooldown Buffer Checker</span>
+                </div>
+                <p class="text-xs sm:text-sm text-torn-muted mb-6">
+                    Enter event details and your current active booster cooldown to calculate your safety buffer or check if your cooldown exceeds the cutoff.
+                </p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <!-- Event Name -->
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-torn-muted mb-2">
+                            Event Name
+                        </label>
+                        <input type="text" id="event-name" placeholder="e.g. CaffeineCon, Dog Tags, Halloween, Elimination" value="CaffeineCon" class="w-full bg-torn-input border border-torn-border rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-torn-gold transition text-xs sm:text-sm">
+                    </div>
+
+                    <!-- Event Start Time -->
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-torn-muted mb-2">
+                            Event Start Time (TCT / UTC)
+                        </label>
+                        <input type="datetime-local" id="event-datetime" class="w-full bg-torn-input border border-torn-border rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-torn-gold transition font-mono-code text-xs sm:text-sm">
+                    </div>
+
+                    <!-- Local Timezone Selector -->
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="text-xs font-semibold uppercase tracking-wider text-torn-muted">
+                                Local Timezone Offset
+                            </label>
+                            <span class="text-xs text-torn-gold font-mono-code" id="custom-tz-display">SGT (UTC +8)</span>
+                        </div>
+                        <select id="custom-tz-select" class="w-full bg-torn-input border border-torn-border rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-torn-gold transition font-mono-code text-xs sm:text-sm">
+                            <option value="-12">UTC -12:00 (Anytown)</option>
+                            <option value="-8">UTC -08:00 (PST / US Pacific)</option>
+                            <option value="-7">UTC -07:00 (MST / US Mountain)</option>
+                            <option value="-6">UTC -06:00 (CST / US Central)</option>
+                            <option value="-5">UTC -05:00 (EST / US Eastern)</option>
+                            <option value="0">UTC +00:00 (TCT / GMT / London Winter)</option>
+                            <option value="1">UTC +01:00 (BST / CET / West Africa)</option>
+                            <option value="2">UTC +02:00 (CEST / EET / Cairo)</option>
+                            <option value="3">UTC +03:00 (MSK / Riyadh / East Africa)</option>
+                            <option value="5.5">UTC +05:30 (IST / India)</option>
+                            <option value="7">UTC +07:00 (ICT / Bangkok / Jakarta)</option>
+                            <option value="8" selected>UTC +08:00 (SGT / AWST / Singapore / HK)</option>
+                            <option value="9">UTC +09:00 (JST / Tokyo / Seoul)</option>
+                            <option value="10">UTC +10:00 (AEST / Sydney / Brisbane)</option>
+                            <option value="12">UTC +12:00 (NZST / Fiji)</option>
+                        </select>
+                    </div>
+
+                    <!-- Active Booster Cooldown Inputs -->
+                    <div class="md:col-span-2 bg-torn-bg/80 border border-torn-border rounded-xl p-4 space-y-3">
+                        <label class="block text-xs font-bold uppercase tracking-wider text-torn-gold flex items-center gap-1.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            CURRENT ACTIVE BOOSTER COOLDOWN
+                        </label>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-[11px] font-semibold text-torn-muted mb-1">Hours</label>
+                                <input type="number" id="booster-cd-hours" min="0" max="48" value="8" placeholder="e.g. 8" class="w-full bg-torn-input border border-torn-border rounded-lg px-3.5 py-2 text-xs sm:text-sm text-white focus:outline-none focus:border-torn-gold transition font-mono-code">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-semibold text-torn-muted mb-1">Minutes</label>
+                                <input type="number" id="booster-cd-mins" min="0" max="59" value="23" placeholder="e.g. 23" class="w-full bg-torn-input border border-torn-border rounded-lg px-3.5 py-2 text-xs sm:text-sm text-white focus:outline-none focus:border-torn-gold transition font-mono-code">
+                            </div>
+                        </div>
+                        <p class="text-[11px] text-torn-muted">
+                            Enter your active booster cooldown from game (only accepts hours and minutes).
+                        </p>
+                    </div>
+                </div>
+
+                <div class="mt-6 pt-5 border-t border-torn-border flex justify-end">
+                    <button onclick="calculateCustomEvent()" class="w-full sm:w-auto px-6 py-3 rounded-xl bg-torn-gold hover:bg-torn-goldHover text-black font-bold text-xs sm:text-sm transition shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                        Calculate Cooldown Cutoffs
+                    </button>
+                </div>
+            </div>
+
+            <!-- Event Cutoffs Results View -->
+            <div id="custom-results-container" class="hidden space-y-4">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-base sm:text-lg font-bold text-white flex items-center gap-2" id="custom-results-title">
+                        Cooldown Cutoffs
+                    </h3>
+                    <button onclick="copyCustomTimeline()" class="text-xs bg-torn-card hover:bg-torn-border border border-torn-border px-3.5 py-2 rounded-xl transition text-torn-text flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v1-M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+                        Copy Cutoffs
+                    </button>
+                </div>
+
+                <!-- Dynamic Status Banner (Green = Safe Buffer, Red = Overdue/Exceeded) -->
+                <div id="cooldown-status-banner" class="p-4 sm:p-5 rounded-2xl border shadow-xl flex items-start gap-3 transition">
+                    <div id="status-icon-container" class="mt-0.5"></div>
+                    <div class="space-y-1">
+                        <h4 id="status-banner-title" class="text-sm font-bold"></h4>
+                        <p id="status-banner-desc" class="text-xs leading-relaxed"></p>
+                    </div>
+                </div>
+
+                <!-- Static Cutoff Benchmark Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Booster Cutoff Card -->
+                    <div class="bg-torn-card border border-torn-border rounded-2xl p-5 shadow-lg flex flex-col justify-between space-y-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-torn-gold flex items-center justify-center font-bold text-sm font-mono">
+                                48h
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-semibold text-white">Stop All Boosters By</h4>
+                                <p class="text-xs text-torn-muted">Max 48h Booster CD Limit (Faction Perk)</p>
+                            </div>
+                        </div>
+                        <div class="bg-torn-bg/80 rounded-xl p-3 border border-torn-border/60 space-y-1.5 font-mono-code text-xs">
+                            <div class="flex justify-between items-center">
+                                <span class="text-torn-muted">TCT:</span>
+                                <span id="booster-tct" class="text-torn-gold font-semibold">-</span>
+                            </div>
+                            <div class="flex justify-between items-center pt-1 border-t border-torn-border/40">
+                                <span class="text-torn-muted">Local:</span>
+                                <span id="booster-local" class="text-sky-300 font-semibold">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Drug Cutoff Card -->
+                    <div class="bg-torn-card border border-torn-border rounded-2xl p-5 shadow-lg flex flex-col justify-between space-y-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center font-bold text-sm font-mono">
+                                8h
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-semibold text-white">Stop All Drugs By</h4>
+                                <p class="text-xs text-torn-muted">Max 8h Drug CD Limit (Xanax / Heavy)</p>
+                            </div>
+                        </div>
+                        <div class="bg-torn-bg/80 rounded-xl p-3 border border-torn-border/60 space-y-1.5 font-mono-code text-xs">
+                            <div class="flex justify-between items-center">
+                                <span class="text-torn-muted">TCT:</span>
+                                <span id="drug-tct" class="text-rose-400 font-semibold">-</span>
+                            </div>
+                            <div class="flex justify-between items-center pt-1 border-t border-torn-border/40">
+                                <span class="text-torn-muted">Local:</span>
+                                <span id="drug-local" class="text-sky-300 font-semibold">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="border-t border-torn-border py-5 bg-torn-card/30 text-center text-xs text-torn-muted">
+        <p>Torn City Timing Assistant v3.5 &bull; Designed for Ranked War Stacking & Event Planning.</p>
+    </footer>
+
+    <script>
+        // --- 1. LIVE CLOCKS (TCT & LOCAL) ---
+        function updateClocks() {
+            const now = new Date();
+            const pad = (n) => String(n).padStart(2, '0');
+            
+            // Format TCT (UTC)
+            const tctStr = `${now.getUTCFullYear()}-${pad(now.getUTCMonth() + 1)}-${pad(now.getUTCDate())} ${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())}:${pad(now.getUTCSeconds())}`;
+            document.getElementById('clock-tct').innerText = tctStr;
+
+            // Format Local Clock
+            const locStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+            document.getElementById('clock-local').innerText = locStr;
+        }
+        setInterval(updateClocks, 1000);
+        updateClocks();
+
+        // --- 2. INITIALIZATION ON LOAD ---
+        window.addEventListener('DOMContentLoaded', () => {
+            const defaultDate = new Date();
+            defaultDate.setUTCDate(defaultDate.getUTCDate() + 1);
+            defaultDate.setUTCHours(15, 0, 0, 0);
+
+            const formatForInput = (d) => {
+                const pad = (n) => String(n).padStart(2, '0');
+                return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+            };
+
+            document.getElementById('war-datetime').value = formatForInput(defaultDate);
+            document.getElementById('event-datetime').value = formatForInput(defaultDate);
+
+            calculateWarStack();
+            calculateCustomEvent();
+        });
+
+        // --- 3. TAB NAVIGATION CONTROL ---
+        function switchTab(tabKey) {
+            const warSec = document.getElementById('tab-war');
+            const customSec = document.getElementById('tab-custom');
+            const warBtn = document.getElementById('tab-btn-war');
+            const customBtn = document.getElementById('tab-btn-custom');
+
+            if (tabKey === 'war') {
+                warSec.classList.remove('hidden');
+                customSec.classList.add('hidden');
+                warBtn.className = "py-3 px-3 sm:px-4 rounded-xl font-semibold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 bg-torn-gold text-black shadow-md shadow-amber-500/20";
+                customBtn.className = "py-3 px-3 sm:px-4 rounded-xl font-semibold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 text-torn-muted hover:text-white hover:bg-torn-border/40";
+            } else {
+                customSec.classList.remove('hidden');
+                warSec.classList.add('hidden');
+                customBtn.className = "py-3 px-3 sm:px-4 rounded-xl font-semibold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 bg-torn-gold text-black shadow-md shadow-amber-500/20";
+                warBtn.className = "py-3 px-3 sm:px-4 rounded-xl font-semibold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 text-torn-muted hover:text-white hover:bg-torn-border/40";
+            }
+        }
+
+        // --- 4. SMART GAME NOTIFICATION AUTO-PARSER ---
+        function parseWarText() {
+            const raw = document.getElementById('war-raw-paste').value.trim();
+            const feedback = document.getElementById('paste-feedback');
+
+            if (!raw) {
+                feedback.innerText = "Paste notification string above to auto-extract date/time into the input picker below.";
+                feedback.className = "text-[11px] text-torn-muted italic";
+                return;
+            }
+
+            // Matches game format e.g., "Thu 13:00:00 - 08/10/26" -> HH:MM:SS - DD/MM/YY
+            const match = raw.match(/(\d{2}:\d{2}):\d{2}\s*-\s*(\d{2})\/(\d{2})\/(\d{2})/);
+            if (match) {
+                const timeHM = match[1];
+                const day = match[2];
+                const month = match[3];
+                const yearShort = match[4];
+                const fullYear = `20${yearShort}`;
+
+                const isoStr = `${fullYear}-${month}-${day}T${timeHM}`;
+                document.getElementById('war-datetime').value = isoStr;
+
+                feedback.innerText = `✅ Auto-extracted War Start: ${fullYear}-${month}-${day} ${timeHM} TCT`;
+                feedback.className = "text-[11px] text-emerald-400 font-medium";
+
+                calculateWarStack();
+            } else {
+                feedback.innerText = "⚠️ Could not auto-detect format. Check pasted text or enter date manually below.";
+                feedback.className = "text-[11px] text-amber-400 font-medium";
+            }
+        }
+
+        document.getElementById('war-raw-paste').addEventListener('input', parseWarText);
+        function triggerParseManual() {
+            parseWarText();
+        }
+
+        // --- 5. TIMEZONE OFFSET LISTENERS ---
+        document.getElementById('war-tz-select').addEventListener('change', function(e) {
+            const selectedText = e.target.options[e.target.selectedIndex].text;
+            document.getElementById('war-tz-display').innerText = selectedText.split(' ')[1] + ' ' + selectedText.split(' ')[2];
+            calculateWarStack();
+        });
+
+        document.getElementById('custom-tz-select').addEventListener('change', function(e) {
+            const selectedText = e.target.options[e.target.selectedIndex].text;
+            document.getElementById('custom-tz-display').innerText = selectedText.split(' ')[1] + ' ' + selectedText.split(' ')[2];
+            calculateCustomEvent();
+        });
+
+        // Auto-recalculate active cooldowns on input change
+        document.getElementById('booster-cd-hours').addEventListener('input', calculateCustomEvent);
+        document.getElementById('booster-cd-mins').addEventListener('input', calculateCustomEvent);
+
+        // Date and Time formatter helper
+        function formatDateTime(utcDate, offsetHours) {
+            const localDate = new Date(utcDate.getTime() + (offsetHours * 3600000));
+            const pad = (n) => String(n).padStart(2, '0');
+
+            const yr = localDate.getUTCFullYear();
+            const mo = pad(localDate.getUTCMonth() + 1);
+            const da = pad(localDate.getUTCDate());
+            const hr = pad(localDate.getUTCHours());
+            const mi = pad(localDate.getUTCMinutes());
+
+            const utcYr = utcDate.getUTCFullYear();
+            const utcMo = pad(utcDate.getUTCMonth() + 1);
+            const utcDa = pad(utcDate.getUTCDate());
+            const utcHr = pad(utcDate.getUTCHours());
+            const utcMi = pad(utcDate.getUTCMinutes());
+
+            const sign = offsetHours >= 0 ? '+' : '';
+            return {
+                tct: `${utcYr}-${utcMo}-${utcDa} ${utcHr}:${utcMi} TCT`,
+                local: `${yr}-${mo}-${da} ${hr}:${mi} (UTC ${sign}${offsetHours})`
+            };
+        }
+
+        // --- 6. WAR STACKING CALCULATION ENGINE ---
+        let lastWarResultText = "";
+        function calculateWarStack() {
+            const inputVal = document.getElementById('war-datetime').value;
+            const offset = parseFloat(document.getElementById('war-tz-select').value) || 0;
+
+            if (!inputVal) return;
+
+            const warTct = new Date(inputVal + "Z");
+            if (isNaN(warTct.getTime())) return;
+
+            // Total Lead Time Calculation:
+            // 3x 7h Xanax CDs (21h) + 4h 02m Airstrip Flight/Rehab (242m) + 1h Cushion Buffer (60m)
+            // Total Lead Time = 26 hours 02 minutes = 1,562 minutes
+            const totalLeadMins = (21 * 60) + 242 + 60; // 1,562 mins
+
+            const startStack = new Date(warTct.getTime() - (totalLeadMins * 60000));
+            const xanax2 = new Date(startStack.getTime() + (7 * 3600000));
+            const xanax3 = new Date(startStack.getTime() + (14 * 3600000));
+            const xanax4Fly = new Date(startStack.getTime() + (21 * 3600000));
+            const landSwiss = new Date(xanax4Fly.getTime() + (116 * 60000)); // 1h 56m flight
+            const landTorn = new Date(warTct.getTime() - (60 * 60000));      // 1h cushion before war
+
+            // UPDATE RED HIGHLIGHT TEXT BADGE BESIDE HEADLINE
+            const startStackFormatted = formatDateTime(startStack, offset);
+            document.getElementById('war-stack-highlight-text').innerText = `Start Stacking latest by ${startStackFormatted.tct}`;
+
+            const steps = [
+                { 
+                    title: "Take 1st Xanax (+250 E)", 
+                    desc: "Take 1st Xanax. Incurs 7-hour drug cooldown. Lead time required: 26h 02m before war start.", 
+                    date: startStack, 
+                    badge: "STEP 1", 
+                    color: "border-torn-border bg-torn-card" 
+                },
+                { 
+                    title: "Take 2nd Xanax (+250 E)", 
+                    desc: "Take 2nd Xanax (500 E total). Incurs 7-hour drug cooldown.", 
+                    date: xanax2, 
+                    badge: "STEP 2", 
+                    color: "border-torn-border bg-torn-card" 
+                },
+                { 
+                    title: "Take 3rd Xanax (+250 E)", 
+                    desc: "Take 3rd Xanax (750 E total). Incurs 7-hour drug cooldown.", 
+                    date: xanax3, 
+                    badge: "STEP 3", 
+                    color: "border-torn-border bg-torn-card" 
+                },
+                { 
+                    title: "Take 4th Xanax (+250 E) & Fly to Switzerland", 
+                    desc: "Take 4th Xanax (1,000 E total). Immediately board Airstrip flight to Swiss for rehab.", 
+                    date: xanax4Fly, 
+                    badge: "STEP 4", 
+                    color: "border-amber-500/50 bg-amber-500/10 text-white" 
+                },
+                { 
+                    title: "Land in Swiss, Rehab & Fly Back", 
+                    desc: "Rehab addiction to 0 in Swiss clinic, then board return flight back to Torn City.", 
+                    date: landSwiss, 
+                    badge: "REHAB", 
+                    color: "border-torn-border bg-torn-card" 
+                },
+                { 
+                    title: "Land back in Torn City (1 HOUR CUSHION)", 
+                    desc: "Arrive back in Torn with 1,000 Energy & 0 Drug CD. Exactly 1 hour cushion left to set gear, weapons, and meds.", 
+                    date: landTorn, 
+                    badge: "BUFFER", 
+                    color: "border-emerald-500/50 bg-emerald-500/10 text-emerald-300 font-semibold" 
+                },
+                { 
+                    title: "WAR STARTS! (1,000 E Ready)", 
+                    desc: "Ranked war officially begins! Attack with full 1,000 Energy stack.", 
+                    date: warTct, 
+                    badge: "WAR START", 
+                    color: "border-torn-gold/60 bg-torn-gold/10 text-torn-gold font-bold" 
+                }
+            ];
+
+            const container = document.getElementById('war-timeline-list');
+            container.innerHTML = "";
+            lastWarResultText = `TORN CITY WAR STACKING TIMELINE (War Start: ${formatDateTime(warTct, offset).tct})\n` +
+                                `LATEST STACK START: ${startStackFormatted.tct}\n`;
+
+            steps.forEach((step) => {
+                const formatted = formatDateTime(step.date, offset);
+                lastWarResultText += `\n[${step.badge}] ${step.title}\n - TCT:   ${formatted.tct}\n - Local: ${formatted.local}\n`;
+
+                const card = document.createElement('div');
+                card.className = `p-4 rounded-xl border ${step.color} shadow-md flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 transition hover:border-torn-gold/50`;
+                card.innerHTML = `
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] px-2 py-0.5 rounded font-mono-code font-bold bg-torn-bg text-torn-gold border border-torn-border">${step.badge}</span>
+                            <h4 class="font-semibold text-white text-xs sm:text-sm">${step.title}</h4>
+                        </div>
+                        <p class="text-xs text-torn-muted">${step.desc}</p>
+                    </div>
+                    <div class="text-right font-mono-code text-xs space-y-0.5 bg-torn-bg/70 px-3 py-2 rounded-lg border border-torn-border/60 w-full sm:w-auto">
+                        <div class="text-torn-gold font-semibold">${formatted.tct}</div>
+                        <div class="text-sky-300">${formatted.local}</div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+            document.getElementById('war-results-container').classList.remove('hidden');
+        }
+
+        function copyWarTimeline() {
+            if (!lastWarResultText) return;
+            const textarea = document.createElement('textarea');
+            textarea.value = lastWarResultText;
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                alertToast("War stacking timeline copied!");
+            } catch (err) {
+                console.error('Failed to copy', err);
+            }
+            document.body.removeChild(textarea);
+        }
+
+        // --- 7. CUSTOM EVENT COOLDOWN CUTOFF & BUFFER ENGINE ---
+        let lastCustomResultText = "";
+        function calculateCustomEvent() {
+            const eventName = document.getElementById('event-name').value.trim() || "Custom Event";
+            const inputVal = document.getElementById('event-datetime').value;
+            const offset = parseFloat(document.getElementById('custom-tz-select').value) || 0;
+
+            if (!inputVal) return;
+
+            const eventTct = new Date(inputVal + "Z");
+            if (isNaN(eventTct.getTime())) return;
+
+            // Static Benchmark Cutoffs
+            // 48 hours before event start (Max faction perk booster CD limit)
+            // 8 hours before event start (Max drug CD limit)
+            const boosterCutoff = new Date(eventTct.getTime() - (48 * 3600000));
+            const drugCutoff = new Date(eventTct.getTime() - (8 * 3600000));
+
+            const boosterFmt = formatDateTime(boosterCutoff, offset);
+            const drugFmt = formatDateTime(drugCutoff, offset);
+            const eventFmt = formatDateTime(eventTct, offset);
+
+            // Active Booster Cooldown Buffer Math
+            const curHours = parseInt(document.getElementById('booster-cd-hours').value) || 0;
+            const curMins = parseInt(document.getElementById('booster-cd-mins').value) || 0;
+            const activeCdMins = (curHours * 60) + curMins;
+
+            const nowUtc = new Date();
+            const cdFinishTime = new Date(nowUtc.getTime() + (activeCdMins * 60000));
+
+            const banner = document.getElementById('cooldown-status-banner');
+            const iconContainer = document.getElementById('status-icon-container');
+            const titleEl = document.getElementById('status-banner-title');
+            const descEl = document.getElementById('status-banner-desc');
+
+            let bannerStatusText = "";
+
+            if (cdFinishTime < eventTct) {
+                // GREEN SAFE STATUS BANNER: Cooldown finishes BEFORE event start
+                const diffMins = Math.floor((eventTct.getTime() - cdFinishTime.getTime()) / 60000);
+                const bufHours = Math.floor(diffMins / 60);
+                const bufMins = diffMins % 60;
+
+                banner.className = "p-4 sm:p-5 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 text-emerald-300 shadow-xl flex items-start gap-3 transition";
+                iconContainer.innerHTML = `<svg class="w-6 h-6 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`;
+                titleEl.innerText = `SAFE TO USE BOOSTERS (Buffer Left: ${bufHours}h ${bufMins}m)`;
+                descEl.innerText = `Your active booster cooldown will clear on ${formatDateTime(cdFinishTime, offset).tct}, which is ${bufHours}h ${bufMins}m BEFORE ${eventName} starts. You can safely take up to ${bufHours}h ${bufMins}m more of boosters right now!`;
+                bannerStatusText = `STATUS: SAFE TO USE BOOSTERS (Buffer Left: ${bufHours}h ${bufMins}m before ${eventName} starts)`;
+            } else {
+                // RED EXCEEDED STATUS BANNER: Cooldown bleeds past event start time
+                const overdueMins = Math.floor((cdFinishTime.getTime() - eventTct.getTime()) / 60000);
+                const ovHours = Math.floor(overdueMins / 60);
+                const ovMins = overdueMins % 60;
+
+                banner.className = "p-4 sm:p-5 rounded-2xl border border-rose-500/40 bg-rose-500/10 text-rose-300 shadow-xl flex items-start gap-3 transition";
+                iconContainer.innerHTML = `<svg class="w-6 h-6 text-rose-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`;
+                titleEl.innerText = `EXCEEDED CUTOFF BY ${ovHours}h ${ovMins}m`;
+                descEl.innerText = `Your active cooldown will bleed past the event start time! It will clear at ${formatDateTime(cdFinishTime, offset).tct}, which is ${ovHours}h ${ovMins}m AFTER ${eventName} begins. STOP taking boosters now!`;
+                bannerStatusText = `STATUS: EXCEEDED CUTOFF by ${ovHours}h ${ovMins}m (Clears after ${eventName} starts)`;
+            }
+
+            document.getElementById('custom-results-title').innerText = `Cooldown Cutoffs for: ${eventName}`;
+
+            document.getElementById('booster-tct').innerText = boosterFmt.tct;
+            document.getElementById('booster-local').innerText = boosterFmt.local;
+
+            document.getElementById('drug-tct').innerText = drugFmt.tct;
+            document.getElementById('drug-local').innerText = drugFmt.local;
+
+            lastCustomResultText = `COOLDOWN CUTOFFS FOR: ${eventName.toUpperCase()}\n` +
+                                   `Event Start: ${eventFmt.tct} / Local: ${eventFmt.local}\n\n` +
+                                   `ACTIVE COOLDOWN CHECK (${curHours}h ${curMins}m):\n` +
+                                   ` - ${bannerStatusText}\n\n` +
+                                   `1. STOP ALL BOOSTERS BY (Max 48h Booster CD Limit):\n` +
+                                   ` - TCT:   ${boosterFmt.tct}\n` +
+                                   ` - Local: ${boosterFmt.local}\n\n` +
+                                   `2. STOP ALL DRUGS BY (Max 8h Drug CD Limit):\n` +
+                                   ` - TCT:   ${drugFmt.tct}\n` +
+                                   ` - Local: ${drugFmt.local}\n`;
+
+            document.getElementById('custom-results-container').classList.remove('hidden');
+        }
+
+        function copyCustomTimeline() {
+            if (!lastCustomResultText) return;
+            const textarea = document.createElement('textarea');
+            textarea.value = lastCustomResultText;
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                alertToast("Custom event cutoffs copied!");
+            } catch (err) {
+                console.error('Failed to copy', err);
+            }
+            document.body.removeChild(textarea);
+        }
+
+        // --- 8. UI TOAST NOTIFICATION ---
+        function alertToast(message) {
+            const existing = document.getElementById('custom-toast');
+            if (existing) existing.remove();
+
+            const toast = document.createElement('div');
+            toast.id = 'custom-toast';
+            toast.className = 'fixed bottom-5 right-5 z-50 bg-torn-gold text-black font-bold text-xs px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 transform translate-y-8 opacity-0 transition-all duration-300';
+            toast.innerHTML = `
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                <span>${message}</span>
+            `;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-8', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-8', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 2500);
+        }
+    </script>
+</body>
+</html>
